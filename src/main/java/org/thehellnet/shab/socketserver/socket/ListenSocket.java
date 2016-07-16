@@ -28,15 +28,13 @@ public class ListenSocket {
 
         keepRunning = true;
         thread = new Thread(() -> {
-            while (keepRunning) {
-                Socket newSocket;
-                try {
-                    newSocket = socket.accept();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    continue;
+            try {
+                while (keepRunning && !socket.isClosed()) {
+                    Socket newSocket = socket.accept();
+                    callback.newClient(newSocket);
                 }
-                callback.newClient(newSocket);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
         thread.setDaemon(true);
@@ -61,5 +59,13 @@ public class ListenSocket {
 
         socket = null;
         thread = null;
+    }
+
+    public void join() {
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

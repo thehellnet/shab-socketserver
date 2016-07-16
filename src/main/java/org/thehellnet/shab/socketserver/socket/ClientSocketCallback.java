@@ -5,5 +5,7 @@ package org.thehellnet.shab.socketserver.socket;
  */
 public interface ClientSocketCallback {
 
-    void newLine(String line);
+    void newLine(ClientSocket clientSocket, String line);
+
+    void disconnected(ClientSocket clientSocket);
 }
