@@ -5,9 +5,9 @@ import ch.qos.logback.core.joran.spi.ConsoleTarget
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 
-def logDir = new File(System.getProperty("user.home"), "/work/socketserver").toString();
-def logName = "socketserver.log";
-def logTag = "%d{yyyyMMdd}";
+//def logDir = new File(System.getProperty("user.home"), "/work/socketserver").toString();
+//def logName = "socketserver.log";
+//def logTag = "%d{yyyyMMdd}";
 
 appender("STDOUT", ConsoleAppender) {
     target = ConsoleTarget.SystemOut
