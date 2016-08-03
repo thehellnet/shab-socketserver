@@ -2,6 +2,7 @@ package org.thehellnet.shab.socketserver.socket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.thehellnet.shab.socketserver.protocol.Client;
 
 import java.io.*;
 import java.net.Socket;
@@ -14,13 +15,17 @@ public class ClientSocket {
     private static final Logger logger = LoggerFactory.getLogger(ClientSocket.class);
 
     private ClientSocketCallback callback;
+
     private Thread thread;
     private Socket socket;
     private boolean keepRunning;
     private BufferedReader reader;
     private PrintWriter writer;
+
     private String address = "";
     private String lastLine = "";
+
+    public Client client = new Client();
 
     public ClientSocket(Socket socket, ClientSocketCallback callback) {
         this.socket = socket;

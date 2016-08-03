@@ -38,11 +38,13 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
 
     @Override
     public void newLine(ClientSocket clientSocket, String line) {
-        if (!lastLine.equals(line)) {
-            lastLine = line;
-            logger.info(String.format("Line from %s: %s", clientSocket.toString(), line));
-            clientSockets.forEach(cs -> cs.send(line));
+        if (lastLine.equals(line)) {
+            return;
         }
+
+        lastLine = line;
+        logger.info(String.format("Line from %s: %s", clientSocket.toString(), line));
+        clientSockets.forEach(cs -> cs.send(line));
     }
 
     @Override
