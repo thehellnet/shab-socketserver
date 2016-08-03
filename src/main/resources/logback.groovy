@@ -40,4 +40,4 @@ appender("STDERR", ConsoleAppender) {
 
 root(WARN, ["STDOUT", "STDERR"])
 
-logger("org.thehellnet.shab.socketserver", INFO)
+logger("org.thehellnet.shab.socketserver", DEBUG)
