@@ -1,5 +1,7 @@
 package org.thehellnet.shab.protocol.line;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.thehellnet.shab.protocol.Command;
 import org.thehellnet.shab.protocol.exception.AbstractProtocolException;
 import org.thehellnet.shab.protocol.exception.ParseLineException;
@@ -10,6 +12,7 @@ import org.thehellnet.shab.protocol.exception.ParseLineException;
 public class HabImageLine extends Line {
 
     private static final Command COMMAND = Command.HAB_IMAGE;
+    public static final String COMMAND_TAG = "HI";
 
     private int sliceTot;
     private int sliceNum;
@@ -24,13 +27,17 @@ public class HabImageLine extends Line {
     }
 
     @Override
-    public String serialize() {
-        return null;
+    public String serializeLine() {
+        return String.format("%s|%d|%d|%s",
+                COMMAND_TAG,
+                sliceTot,
+                sliceNum,
+                StringUtils.newStringUtf8(Base64.encodeBase64(data, false)));
     }
 
     @Override
     protected void parse(String[] items) throws AbstractProtocolException {
-        if (!items[1].equals("HP") || items.length != 5) {
+        if (!items[1].equals(COMMAND_TAG) || items.length != 5) {
             throw new ParseLineException();
         }
 

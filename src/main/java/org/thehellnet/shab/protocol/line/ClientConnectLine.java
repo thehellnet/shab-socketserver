@@ -10,6 +10,7 @@ import org.thehellnet.shab.protocol.exception.ParseLineException;
 public class ClientConnectLine extends Line {
 
     private static final Command COMMAND = Command.CLIENT_CONNECT;
+    public static final String COMMAND_TAG = "CC";
 
     private String id;
     private String name;
@@ -23,13 +24,13 @@ public class ClientConnectLine extends Line {
     }
 
     @Override
-    public String serialize() {
-        return null;
+    public String serializeLine() {
+        return String.format("%s|%s|%s", COMMAND_TAG, id, name);
     }
 
     @Override
     protected void parse(String[] items) throws AbstractProtocolException {
-        if (!items[1].equals("CC") || items.length != 4) {
+        if (!items[1].equals(COMMAND_TAG) || items.length != 4) {
             throw new ParseLineException();
         }
 

@@ -10,6 +10,7 @@ import org.thehellnet.shab.protocol.exception.ParseLineException;
 public class ClientDisconnectLine extends Line {
 
     private static final Command COMMAND = Command.CLIENT_DISCONNECT;
+    public static final String COMMAND_TAG = "CD";
 
     private String id;
 
@@ -22,13 +23,13 @@ public class ClientDisconnectLine extends Line {
     }
 
     @Override
-    public String serialize() {
-        return null;
+    public String serializeLine() {
+        return String.format("%s|%s", COMMAND_TAG, id);
     }
 
     @Override
     protected void parse(String[] items) throws AbstractProtocolException {
-        if (!items[1].equals("CD") || items.length != 3) {
+        if (!items[1].equals(COMMAND_TAG) || items.length != 3) {
             throw new ParseLineException();
         }
 

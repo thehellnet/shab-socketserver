@@ -1,6 +1,7 @@
 package org.thehellnet.shab.protocol.line;
 
 import org.thehellnet.shab.protocol.Command;
+import org.thehellnet.shab.protocol.LineFactory;
 import org.thehellnet.shab.protocol.exception.AbstractProtocolException;
 
 /**
@@ -11,14 +12,14 @@ public abstract class Line {
     private String rawLine;
     private Command command;
 
-    protected Line(Command command) {
+    Line(Command command) {
         this.command = command;
     }
 
-    protected Line(Command command, String rawLine) throws AbstractProtocolException {
+    Line(Command command, String rawLine) throws AbstractProtocolException {
         this.command = command;
         this.rawLine = rawLine;
-        parse(rawLine.split("|"));
+        parse(rawLine.split("\\|"));
     }
 
     public String getRawLine() {
@@ -37,7 +38,11 @@ public abstract class Line {
         this.command = command;
     }
 
-    public abstract String serialize();
+    public String serialize() {
+        return LineFactory.addChecksum(serializeLine());
+    }
+
+    protected abstract String serializeLine();
 
     protected abstract void parse(String[] items) throws AbstractProtocolException;
 }

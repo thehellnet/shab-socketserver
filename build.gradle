@@ -48,7 +48,7 @@ dependencies {
     compile group: "ch.qos.logback", name: "logback-core", version: "1.1.7"
     compile group: "ch.qos.logback", name: "logback-classic", version: "1.1.7"
 
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
+    compile group: "commons-codec", name: "commons-codec", version: "1.10"
 
     compile group: "joda-time", name: "joda-time", version: "2.9.3"
 

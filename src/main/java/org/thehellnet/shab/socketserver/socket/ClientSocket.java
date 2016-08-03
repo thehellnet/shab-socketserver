@@ -2,7 +2,6 @@ package org.thehellnet.shab.socketserver.socket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.thehellnet.shab.socketserver.protocol.Client;
 
 import java.io.*;
 import java.net.Socket;
@@ -25,7 +24,7 @@ public class ClientSocket {
     private String address = "";
     private String lastLine = "";
 
-    public Client client = new Client();
+    private String clientId;
 
     public ClientSocket(Socket socket, ClientSocketCallback callback) {
         this.socket = socket;
@@ -35,7 +34,7 @@ public class ClientSocket {
     public void start() {
         try {
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+            writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
             address = socket.getRemoteSocketAddress().toString();
         } catch (IOException e) {
             logger.error(e.getMessage());
@@ -87,9 +86,16 @@ public class ClientSocket {
             return;
         }
         lastLine = line;
-        writer.print(line);
-        writer.print("\n");
+        writer.println(line);
         writer.flush();
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     @Override

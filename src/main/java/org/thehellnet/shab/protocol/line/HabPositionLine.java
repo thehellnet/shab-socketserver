@@ -10,6 +10,7 @@ import org.thehellnet.shab.protocol.exception.ParseLineException;
 public class HabPositionLine extends Line {
 
     private static final Command COMMAND = Command.HAB_POSITION;
+    public static final String COMMAND_TAG = "HP";
 
     private float latitude;
     private float longitude;
@@ -24,13 +25,13 @@ public class HabPositionLine extends Line {
     }
 
     @Override
-    public String serialize() {
+    public String serializeLine() {
         return null;
     }
 
     @Override
     protected void parse(String[] items) throws AbstractProtocolException {
-        if (!items[1].equals("HP") || items.length != 5) {
+        if (!items[1].equals(COMMAND_TAG) || items.length != 5) {
             throw new ParseLineException();
         }
 
