@@ -14,10 +14,7 @@ import org.thehellnet.shab.socketserver.socket.ListenSocket;
 import org.thehellnet.shab.socketserver.socket.ListenSocketCallback;
 
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by sardylan on 13/07/16.
@@ -106,39 +103,34 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             clients.add(client);
 
             clientSocket.setClientId(line.getId());
-        }
-
-        if (abstractLine instanceof ClientUpdateLine) {
+        } else if (abstractLine instanceof ClientUpdateLine) {
             ClientUpdateLine line = (ClientUpdateLine) abstractLine;
-            Client client = clients.stream()
+            Optional<Client> clientOptional = clients.stream()
                     .filter(c -> c.getId().equals(line.getId()))
-                    .findFirst()
-                    .get();
-            Position position = new Position(line);
-            client.setPosition(position);
-            clients.add(client);
-        }
-
-        if (abstractLine instanceof ClientDisconnectLine) {
+                    .findFirst();
+            if (clientOptional.isPresent()) {
+                Client client = clientOptional.get();
+                Position position = new Position(line);
+                client.setPosition(position);
+                clients.add(client);
+            }
+        } else if (abstractLine instanceof ClientDisconnectLine) {
             ClientDisconnectLine line = (ClientDisconnectLine) abstractLine;
-            Client client = clients.stream()
+            Optional<Client> clientOptional = clients.stream()
                     .filter(c -> c.getId().equals(line.getId()))
-                    .findFirst()
-                    .get();
-            clients.remove(client);
-        }
-        if (abstractLine instanceof HabPositionLine) {
+                    .findFirst();
+            if (clientOptional.isPresent()) {
+                Client client = clientOptional.get();
+                clients.remove(client);
+            }
+        } else if (abstractLine instanceof HabPositionLine) {
             HabPositionLine line = (HabPositionLine) abstractLine;
             Position position = new Position(line);
             hab.setPosition(position);
-        }
-
-        if (abstractLine instanceof HabImageLine) {
+        } else if (abstractLine instanceof HabImageLine) {
             HabImageLine line = (HabImageLine) abstractLine;
             handleNewImage(line.getSliceTot(), line.getSliceNum(), line.getData());
-        }
-
-        if (abstractLine instanceof HabTelemetryLine) {
+        } else if (abstractLine instanceof HabTelemetryLine) {
             HabTelemetryLine line = (HabTelemetryLine) abstractLine;
         }
     }
