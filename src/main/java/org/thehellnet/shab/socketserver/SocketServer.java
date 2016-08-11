@@ -4,17 +4,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.thehellnet.shab.protocol.LineFactory;
 import org.thehellnet.shab.protocol.Position;
+import org.thehellnet.shab.protocol.entity.Client;
 import org.thehellnet.shab.protocol.exception.AbstractProtocolException;
-import org.thehellnet.shab.protocol.hab.Hab;
 import org.thehellnet.shab.protocol.line.*;
-import org.thehellnet.shab.socketserver.protocol.Client;
+import org.thehellnet.shab.socketserver.protocol.ServerContext;
 import org.thehellnet.shab.socketserver.socket.ClientSocket;
 import org.thehellnet.shab.socketserver.socket.ClientSocketCallback;
 import org.thehellnet.shab.socketserver.socket.ListenSocket;
 import org.thehellnet.shab.socketserver.socket.ListenSocketCallback;
 
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Created by sardylan on 13/07/16.
@@ -27,8 +29,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     private List<ClientSocket> clientSockets = new ArrayList<>();
     private String lastLine = "";
 
-    private Hab hab = new Hab();
-    private Set<Client> clients = new HashSet<>();
+    private ServerContext context;
 
     public static void main(String[] args) {
         SocketServer socketServer = new SocketServer();
@@ -59,21 +60,26 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
 
     @Override
     public void disconnected(ClientSocket clientSocket) {
-        logger.info(String.format("Client from %s disconnected", clientSocket));
+        logger.debug(String.format("Client from %s disconnected", clientSocket));
         clientSockets.remove(clientSocket);
 
         if (clientSocket.getClientId() != null) {
             ClientDisconnectLine line = new ClientDisconnectLine();
             line.setId(clientSocket.getClientId());
             sendAllClients(line);
+            doClientDisconnected(line);
         }
     }
 
     private void run(String[] args) {
         logger.info("START");
+
+        context = new ServerContext();
+
         listenSocket = new ListenSocket(this);
         listenSocket.start(12345);
         listenSocket.join();
+
         logger.info("STOP");
     }
 
@@ -96,46 +102,79 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
         }
 
         if (abstractLine instanceof ClientConnectLine) {
-            ClientConnectLine line = (ClientConnectLine) abstractLine;
-            Client client = new Client();
-            client.setId(line.getId());
-            client.setName(line.getName());
-            clients.add(client);
-
-            clientSocket.setClientId(line.getId());
+            doClientConnected((ClientConnectLine) abstractLine, clientSocket);
         } else if (abstractLine instanceof ClientUpdateLine) {
-            ClientUpdateLine line = (ClientUpdateLine) abstractLine;
-            Optional<Client> clientOptional = clients.stream()
-                    .filter(c -> c.getId().equals(line.getId()))
-                    .findFirst();
-            if (clientOptional.isPresent()) {
-                Client client = clientOptional.get();
-                Position position = new Position(line);
-                client.setPosition(position);
-                clients.add(client);
-            }
+            doClientUpdate((ClientUpdateLine) abstractLine);
         } else if (abstractLine instanceof ClientDisconnectLine) {
-            ClientDisconnectLine line = (ClientDisconnectLine) abstractLine;
-            Optional<Client> clientOptional = clients.stream()
-                    .filter(c -> c.getId().equals(line.getId()))
-                    .findFirst();
-            if (clientOptional.isPresent()) {
-                Client client = clientOptional.get();
-                clients.remove(client);
-            }
+            doClientDisconnected((ClientDisconnectLine) abstractLine);
         } else if (abstractLine instanceof HabPositionLine) {
-            HabPositionLine line = (HabPositionLine) abstractLine;
-            Position position = new Position(line);
-            hab.setPosition(position);
+            doHabPosition((HabPositionLine) abstractLine);
         } else if (abstractLine instanceof HabImageLine) {
-            HabImageLine line = (HabImageLine) abstractLine;
-            handleNewImage(line.getSliceTot(), line.getSliceNum(), line.getData());
+            doHabImage((HabImageLine) abstractLine);
         } else if (abstractLine instanceof HabTelemetryLine) {
-            HabTelemetryLine line = (HabTelemetryLine) abstractLine;
+            doHabTelemetry((HabTelemetryLine) abstractLine);
         }
     }
 
-    private void handleNewImage(int sliceTot, int sliceNum, byte[] data) {
+    private void doHabTelemetry(HabTelemetryLine line) {
+        logger.info("Telemetry update");
+    }
 
+    private void doHabImage(HabImageLine line) {
+        context.setSliceTot(line.getSliceTot());
+        context.setSliceNum(line.getSliceNum());
+        context.getImageBuffer().put(line.getData());
+        logger.info("New image slice from HAB");
+
+        if (context.getSliceNum() == context.getSliceTot()) {
+            if (context.getImageBuffer().hasArray()) {
+                handleNewImage(context.getImageBuffer().array());
+                logger.info("New image completed");
+            }
+        }
+    }
+
+    private void doHabPosition(HabPositionLine line) {
+        Position position = new Position(line);
+        context.getHab().setPosition(position);
+        logger.info("New HAB position");
+    }
+
+    private void doClientDisconnected(ClientDisconnectLine line) {
+        Optional<Client> clientOptional = context.getClients().stream()
+                .filter(c -> c.getId().equals(line.getId()))
+                .findFirst();
+        if (clientOptional.isPresent()) {
+            Client client = clientOptional.get();
+            context.getClients().remove(client);
+            logger.info(String.format("Client %s disconnected", client));
+        }
+    }
+
+    private void doClientUpdate(ClientUpdateLine line) {
+        Optional<Client> clientOptional = context.getClients().stream()
+                .filter(c -> c.getId().equals(line.getId()))
+                .findFirst();
+        if (clientOptional.isPresent()) {
+            Client client = clientOptional.get();
+            Position position = new Position(line);
+            client.setPosition(position);
+            context.getClients().add(client);
+            logger.info(String.format("Client %s updated", client));
+        }
+    }
+
+    private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
+        Client client = new Client();
+        client.setId(line.getId());
+        client.setName(line.getName());
+        context.getClients().add(client);
+
+        clientSocket.setClientId(line.getId());
+
+        logger.info(String.format("New client connected: %s", client));
+    }
+
+    private void handleNewImage(byte[] imageData) {
     }
 }
