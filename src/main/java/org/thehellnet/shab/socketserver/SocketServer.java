@@ -27,7 +27,6 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
 
     private ListenSocket listenSocket;
     private List<ClientSocket> clientSockets = new ArrayList<>();
-    private String lastLine = "";
 
     private ServerContext context;
 
@@ -46,15 +45,8 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
 
     @Override
     public void newLine(ClientSocket clientSocket, String line) {
-        if (lastLine.equals(line)) {
-            return;
-        }
-
-        lastLine = line;
         logger.debug(String.format("Line from %s: %s", clientSocket.toString(), line));
-
         parseLine(clientSocket, line);
-
         sendAllClients(line);
     }
 
@@ -165,6 +157,22 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
+        context.getClients().forEach(client -> {
+            ClientConnectLine clientConnectLine = new ClientConnectLine();
+            clientConnectLine.setId(client.getId());
+            clientConnectLine.setName(client.getName());
+            clientSocket.send(clientConnectLine.serialize());
+
+            if(client.getPosition() != null) {
+                ClientUpdateLine clientUpdateLine = new ClientUpdateLine();
+                clientUpdateLine.setId(client.getId());
+                clientUpdateLine.setLatitude(client.getPosition().getLatitude());
+                clientUpdateLine.setLongitude(client.getPosition().getLongitude());
+                clientUpdateLine.setAltitude(client.getPosition().getAltitude());
+                clientSocket.send(clientUpdateLine.serialize());
+            }
+        });
+
         Client client = new Client();
         client.setId(line.getId());
         client.setName(line.getName());
