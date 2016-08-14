@@ -29,6 +29,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     private List<ClientSocket> clientSockets = new ArrayList<>();
 
     private ServerContext context;
+    private final Object SYNC = new Object();
 
     public static void main(String[] args) {
         SocketServer socketServer = new SocketServer();
@@ -47,7 +48,9 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     public void newLine(ClientSocket clientSocket, String line) {
         logger.debug(String.format("Line from %s: %s", clientSocket.toString(), line));
         parseLine(clientSocket, line);
-        sendAllClients(line);
+        clientSockets.stream()
+                .filter(cs -> cs != clientSocket)
+                .forEach(cs -> cs.send(line));
     }
 
     @Override
@@ -76,11 +79,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void sendAllClients(Line line) {
-        sendAllClients(line.serialize());
-    }
-
-    private void sendAllClients(String line) {
-        clientSockets.forEach(cs -> cs.send(line));
+        clientSockets.forEach(cs -> cs.send(line.serialize()));
     }
 
     private void parseLine(ClientSocket clientSocket, String rawLine) {
@@ -93,23 +92,81 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             return;
         }
 
-        if (abstractLine instanceof ClientConnectLine) {
-            doClientConnected((ClientConnectLine) abstractLine, clientSocket);
-        } else if (abstractLine instanceof ClientUpdateLine) {
-            doClientUpdate((ClientUpdateLine) abstractLine);
-        } else if (abstractLine instanceof ClientDisconnectLine) {
-            doClientDisconnected((ClientDisconnectLine) abstractLine);
-        } else if (abstractLine instanceof HabPositionLine) {
-            doHabPosition((HabPositionLine) abstractLine);
-        } else if (abstractLine instanceof HabImageLine) {
-            doHabImage((HabImageLine) abstractLine);
-        } else if (abstractLine instanceof HabTelemetryLine) {
-            doHabTelemetry((HabTelemetryLine) abstractLine);
+        synchronized (SYNC) {
+            if (abstractLine instanceof ClientConnectLine) {
+                doClientConnected((ClientConnectLine) abstractLine, clientSocket);
+            } else if (abstractLine instanceof ClientUpdateLine) {
+                doClientUpdate((ClientUpdateLine) abstractLine);
+            } else if (abstractLine instanceof ClientDisconnectLine) {
+                doClientDisconnected((ClientDisconnectLine) abstractLine);
+            } else if (abstractLine instanceof HabPositionLine) {
+                doHabPosition((HabPositionLine) abstractLine);
+            } else if (abstractLine instanceof HabImageLine) {
+                doHabImage((HabImageLine) abstractLine);
+            } else if (abstractLine instanceof HabTelemetryLine) {
+                doHabTelemetry((HabTelemetryLine) abstractLine);
+            }
         }
     }
 
-    private void doHabTelemetry(HabTelemetryLine line) {
-        logger.info("Telemetry update");
+    private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
+        context.getClients()
+                .stream()
+                .filter(c -> !c.getId().equals(line.getId()))
+                .forEach(client -> {
+                    ClientConnectLine clientConnectLine = new ClientConnectLine();
+                    clientConnectLine.setId(client.getId());
+                    clientConnectLine.setName(client.getName());
+                    clientSocket.send(clientConnectLine.serialize());
+
+                    if (client.getPosition() != null) {
+                        ClientUpdateLine clientUpdateLine = new ClientUpdateLine();
+                        clientUpdateLine.setId(client.getId());
+                        clientUpdateLine.setLatitude(client.getPosition().getLatitude());
+                        clientUpdateLine.setLongitude(client.getPosition().getLongitude());
+                        clientUpdateLine.setAltitude(client.getPosition().getAltitude());
+                        clientSocket.send(clientUpdateLine.serialize());
+                    }
+                });
+
+        Client client = new Client();
+        client.setId(line.getId());
+        client.setName(line.getName());
+        context.getClients().add(client);
+
+        clientSocket.setClientId(line.getId());
+
+        logger.info(String.format("New client connected: %s", client));
+    }
+
+    private void doClientUpdate(ClientUpdateLine line) {
+        Optional<Client> clientOptional = context.getClients().stream()
+                .filter(c -> c.getId().equals(line.getId()))
+                .findFirst();
+        if (clientOptional.isPresent()) {
+            Client client = clientOptional.get();
+            Position position = new Position(line);
+            client.setPosition(position);
+            context.getClients().add(client);
+            logger.info(String.format("Client %s updated", client));
+        }
+    }
+
+    private void doClientDisconnected(ClientDisconnectLine line) {
+        Optional<Client> clientOptional = context.getClients().stream()
+                .filter(c -> c.getId().equals(line.getId()))
+                .findFirst();
+        if (clientOptional.isPresent()) {
+            Client client = clientOptional.get();
+            context.getClients().remove(client);
+            logger.info(String.format("Client %s disconnected", client));
+        }
+    }
+
+    private void doHabPosition(HabPositionLine line) {
+        Position position = new Position(line);
+        context.getHab().setPosition(position);
+        logger.info("New HAB position");
     }
 
     private void doHabImage(HabImageLine line) {
@@ -126,61 +183,8 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
         }
     }
 
-    private void doHabPosition(HabPositionLine line) {
-        Position position = new Position(line);
-        context.getHab().setPosition(position);
-        logger.info("New HAB position");
-    }
-
-    private void doClientDisconnected(ClientDisconnectLine line) {
-        Optional<Client> clientOptional = context.getClients().stream()
-                .filter(c -> c.getId().equals(line.getId()))
-                .findFirst();
-        if (clientOptional.isPresent()) {
-            Client client = clientOptional.get();
-            context.getClients().remove(client);
-            logger.info(String.format("Client %s disconnected", client));
-        }
-    }
-
-    private void doClientUpdate(ClientUpdateLine line) {
-        Optional<Client> clientOptional = context.getClients().stream()
-                .filter(c -> c.getId().equals(line.getId()))
-                .findFirst();
-        if (clientOptional.isPresent()) {
-            Client client = clientOptional.get();
-            Position position = new Position(line);
-            client.setPosition(position);
-            context.getClients().add(client);
-            logger.info(String.format("Client %s updated", client));
-        }
-    }
-
-    private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
-        context.getClients().forEach(client -> {
-            ClientConnectLine clientConnectLine = new ClientConnectLine();
-            clientConnectLine.setId(client.getId());
-            clientConnectLine.setName(client.getName());
-            clientSocket.send(clientConnectLine.serialize());
-
-            if(client.getPosition() != null) {
-                ClientUpdateLine clientUpdateLine = new ClientUpdateLine();
-                clientUpdateLine.setId(client.getId());
-                clientUpdateLine.setLatitude(client.getPosition().getLatitude());
-                clientUpdateLine.setLongitude(client.getPosition().getLongitude());
-                clientUpdateLine.setAltitude(client.getPosition().getAltitude());
-                clientSocket.send(clientUpdateLine.serialize());
-            }
-        });
-
-        Client client = new Client();
-        client.setId(line.getId());
-        client.setName(line.getName());
-        context.getClients().add(client);
-
-        clientSocket.setClientId(line.getId());
-
-        logger.info(String.format("New client connected: %s", client));
+    private void doHabTelemetry(HabTelemetryLine line) {
+        logger.info("Telemetry update");
     }
 
     private void handleNewImage(byte[] imageData) {
