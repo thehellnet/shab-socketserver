@@ -170,16 +170,18 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doHabImage(HabImageLine line) {
-        context.setSliceTot(line.getSliceTot());
-        context.setSliceNum(line.getSliceNum());
-        context.getImageBuffer().put(line.getData());
+        if (line.getSliceNum() == 1) {
+            context.getHab().clearImageData();
+        }
+
+        context.getHab().setSliceTot(line.getSliceTot());
+        context.getHab().setSliceNum(line.getSliceNum());
+        context.getHab().appendImageData(line.getData());
         logger.info("New image slice from HAB");
 
-        if (context.getSliceNum() == context.getSliceTot()) {
-            if (context.getImageBuffer().hasArray()) {
-                handleNewImage(context.getImageBuffer().array());
-                logger.info("New image completed");
-            }
+        if (line.getSliceNum() == line.getSliceTot()) {
+            handleNewImage(context.getHab().getImageData());
+            logger.info("New image completed");
         }
     }
 

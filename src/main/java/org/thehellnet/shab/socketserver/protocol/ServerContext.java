@@ -14,9 +14,6 @@ public class ServerContext {
 
     private Hab hab = new Hab();
     private Set<Client> clients = new HashSet<>();
-    private int sliceTot;
-    private int sliceNum;
-    private ByteBuffer imageBuffer;
 
     public Hab getHab() {
         return hab;
@@ -32,29 +29,5 @@ public class ServerContext {
 
     public void setClients(Set<Client> clients) {
         this.clients = clients;
-    }
-
-    public ByteBuffer getImageBuffer() {
-        return imageBuffer;
-    }
-
-    public int getSliceTot() {
-        return sliceTot;
-    }
-
-    public void setSliceTot(int sliceTot) {
-        this.sliceTot = sliceTot;
-    }
-
-    public int getSliceNum() {
-        return sliceNum;
-    }
-
-    public void setSliceNum(int sliceNum) {
-        this.sliceNum = sliceNum;
-    }
-
-    public void setImageBuffer(ByteBuffer imageBuffer) {
-        this.imageBuffer = imageBuffer;
     }
 }
