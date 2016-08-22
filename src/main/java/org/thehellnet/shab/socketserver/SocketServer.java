@@ -2,7 +2,6 @@ package org.thehellnet.shab.socketserver;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.thehellnet.shab.protocol.LineFactory;
 import org.thehellnet.shab.protocol.entity.Client;
 import org.thehellnet.shab.protocol.exception.AbstractProtocolException;
 import org.thehellnet.shab.protocol.helper.Position;
