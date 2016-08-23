@@ -16,6 +16,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Created by sardylan on 13/07/16.
@@ -30,7 +31,14 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     private ServerContext context;
 
     public static void main(String[] args) {
-        SocketServer socketServer = new SocketServer();
+        final SocketServer socketServer = new SocketServer();
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                socketServer.stop();
+            }
+        });
+
         socketServer.run(args);
     }
 
@@ -43,7 +51,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     @Override
-    public synchronized void newLine(ClientSocket clientSocket, String line) {
+    public void newLine(ClientSocket clientSocket, String line) {
         logger.debug(String.format("Line from %s: %s", clientSocket.toString(), line));
         parseLine(clientSocket, line);
         clientSockets.stream()
@@ -76,6 +84,11 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
         logger.info("STOP");
     }
 
+    private void stop() {
+        logger.info("STOP REQUEST");
+        listenSocket.stop();
+    }
+
     private void sendAllClients(Line line) {
         clientSockets.forEach(cs -> cs.send(line.serialize()));
     }
@@ -106,9 +119,13 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
+        logger.info("doClientConnected");
+
+        removeClientIfExists(line.getId());
+
         context.getClients()
                 .stream()
-                .filter(c -> !c.getId().equals(line.getId()))
+                .filter(c -> !line.getId().equals(c.getId()))
                 .forEach(client -> {
                     ClientConnectLine clientConnectLine = new ClientConnectLine();
                     clientConnectLine.setId(client.getId());
@@ -136,6 +153,8 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doClientUpdate(ClientUpdateLine line) {
+        logger.info("doClientUpdate");
+
         Optional<Client> clientOptional = context.getClients().stream()
                 .filter(c -> c.getId().equals(line.getId()))
                 .findFirst();
@@ -149,6 +168,8 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doClientDisconnected(ClientDisconnectLine line) {
+        logger.info("doClientDisconnected");
+
         Optional<Client> clientOptional = context.getClients().stream()
                 .filter(c -> c.getId().equals(line.getId()))
                 .findFirst();
@@ -160,12 +181,16 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doHabPosition(HabPositionLine line) {
+        logger.info("doHabPosition");
+
         Position position = new Position(line);
         context.getHab().setPosition(position);
         logger.info("New HAB position");
     }
 
     private void doHabImage(HabImageLine line) {
+        logger.info("doHabImage");
+
         if (line.getSliceNum() == 1) {
             context.getHab().clearImageData();
         }
@@ -182,9 +207,29 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void doHabTelemetry(HabTelemetryLine line) {
-        logger.info("Telemetry update");
+        logger.info("doHabTelemetry");
     }
 
     private void handleNewImage(byte[] imageData) {
+    }
+
+    private void removeClientIfExists(String clientId) {
+        List<Client> clientsToRemove = context.getClients()
+                .stream()
+                .filter(c -> c.getId().equals(clientId))
+                .collect(Collectors.toList());
+
+        clientsToRemove.forEach(client -> {
+            ClientDisconnectLine line = new ClientDisconnectLine();
+            line.setId(client.getId());
+            sendAllClients(line);
+            doClientDisconnected(line);
+        });
+
+        context.getClients().removeAll(clientsToRemove);
+
+        clientSockets.stream()
+                .filter(clientSocket -> clientId.equals(clientSocket.getClientId()))
+                .forEach(clientSocket -> clientSocket.setClientId(null));
     }
 }
