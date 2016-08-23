@@ -28,7 +28,6 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     private List<ClientSocket> clientSockets = new ArrayList<>();
 
     private ServerContext context;
-    private final Object SYNC = new Object();
 
     public static void main(String[] args) {
         SocketServer socketServer = new SocketServer();
@@ -44,7 +43,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     @Override
-    public void newLine(ClientSocket clientSocket, String line) {
+    public synchronized void newLine(ClientSocket clientSocket, String line) {
         logger.debug(String.format("Line from %s: %s", clientSocket.toString(), line));
         parseLine(clientSocket, line);
         clientSockets.stream()
@@ -91,20 +90,18 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             return;
         }
 
-        synchronized (SYNC) {
-            if (abstractLine instanceof ClientConnectLine) {
-                doClientConnected((ClientConnectLine) abstractLine, clientSocket);
-            } else if (abstractLine instanceof ClientUpdateLine) {
-                doClientUpdate((ClientUpdateLine) abstractLine);
-            } else if (abstractLine instanceof ClientDisconnectLine) {
-                doClientDisconnected((ClientDisconnectLine) abstractLine);
-            } else if (abstractLine instanceof HabPositionLine) {
-                doHabPosition((HabPositionLine) abstractLine);
-            } else if (abstractLine instanceof HabImageLine) {
-                doHabImage((HabImageLine) abstractLine);
-            } else if (abstractLine instanceof HabTelemetryLine) {
-                doHabTelemetry((HabTelemetryLine) abstractLine);
-            }
+        if (abstractLine instanceof ClientConnectLine) {
+            doClientConnected((ClientConnectLine) abstractLine, clientSocket);
+        } else if (abstractLine instanceof ClientUpdateLine) {
+            doClientUpdate((ClientUpdateLine) abstractLine);
+        } else if (abstractLine instanceof ClientDisconnectLine) {
+            doClientDisconnected((ClientDisconnectLine) abstractLine);
+        } else if (abstractLine instanceof HabPositionLine) {
+            doHabPosition((HabPositionLine) abstractLine);
+        } else if (abstractLine instanceof HabImageLine) {
+            doHabImage((HabImageLine) abstractLine);
+        } else if (abstractLine instanceof HabTelemetryLine) {
+            doHabTelemetry((HabTelemetryLine) abstractLine);
         }
     }
 
