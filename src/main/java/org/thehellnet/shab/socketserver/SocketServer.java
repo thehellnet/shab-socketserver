@@ -211,6 +211,7 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     }
 
     private void handleNewImage(byte[] imageData) {
+        logger.info("newImage");
     }
 
     private void removeClientIfExists(String clientId) {
