@@ -133,20 +133,27 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
                 .stream()
                 .filter(c -> !line.getId().equals(c.getId()))
                 .forEach(client -> {
-                    ClientConnectLine clientConnectLine = new ClientConnectLine();
-                    clientConnectLine.setId(client.getId());
-                    clientConnectLine.setName(client.getName());
-                    clientSocket.send(clientConnectLine.serialize());
+                    ClientConnectLine clientConnectLine = new ClientConnectLine(client);
+                    clientSocket.send(clientConnectLine);
 
                     if (client.getPosition() != null) {
-                        ClientUpdateLine clientUpdateLine = new ClientUpdateLine();
-                        clientUpdateLine.setId(client.getId());
-                        clientUpdateLine.setLatitude(client.getPosition().getLatitude());
-                        clientUpdateLine.setLongitude(client.getPosition().getLongitude());
-                        clientUpdateLine.setAltitude(client.getPosition().getAltitude());
-                        clientSocket.send(clientUpdateLine.serialize());
+                        ClientUpdateLine clientUpdateLine = new ClientUpdateLine(client);
+                        clientSocket.send(clientUpdateLine);
                     }
                 });
+
+        if (context.getHab().getPosition() != null) {
+            HabPositionLine habPositionLine = new HabPositionLine(context.getHab());
+            clientSocket.send(habPositionLine);
+        }
+
+        if (context.getHab().getImageData().length > 0) {
+            HabImageLine habImageLine = new HabImageLine(context.getHab());
+            clientSocket.send(habImageLine);
+        }
+
+        HabTelemetryLine habTelemetryLine = new HabTelemetryLine(context.getHab());
+        clientSocket.send(habTelemetryLine);
 
         Client client = new Client();
         client.setId(line.getId());
