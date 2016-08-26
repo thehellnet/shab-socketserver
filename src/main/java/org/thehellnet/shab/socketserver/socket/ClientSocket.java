@@ -87,6 +87,7 @@ public class ClientSocket {
     }
 
     public void send(String line) {
+        logger.debug(line);
         if (lastLine.equals(line) || lastLine.length() == 0) {
             return;
         }

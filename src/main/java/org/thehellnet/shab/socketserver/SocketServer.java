@@ -1,5 +1,6 @@
 package org.thehellnet.shab.socketserver;
 
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.thehellnet.shab.protocol.entity.Client;
@@ -53,10 +54,11 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
     @Override
     public void newLine(ClientSocket clientSocket, String line) {
         logger.debug(String.format("Line from %s: %s", clientSocket.toString(), line));
-        parseLine(clientSocket, line);
-        clientSockets.stream()
-                .filter(cs -> cs != clientSocket)
-                .forEach(cs -> cs.send(line));
+        if (parseLine(clientSocket, line)) {
+            clientSockets.stream()
+                    .filter(cs -> cs != clientSocket)
+                    .forEach(cs -> cs.send(line));
+        }
     }
 
     @Override
@@ -228,7 +230,9 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
 
     private boolean doServerPing(ServerPingLine line, ClientSocket clientSocket) {
         logger.info("doServerPing");
-        clientSocket.send(line);
+        ServerPingLine spLine = new ServerPingLine();
+        spLine.setTimestamp(DateTime.now().getMillis());
+        clientSocket.send(spLine);
         return false;
     }
 
