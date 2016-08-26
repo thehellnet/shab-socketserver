@@ -2,6 +2,7 @@ package org.thehellnet.shab.socketserver.socket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.thehellnet.shab.protocol.line.Line;
 
 import java.io.*;
 import java.net.Socket;
@@ -79,6 +80,10 @@ public class ClientSocket {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public void send(Line line) {
+        send(line.serialize());
     }
 
     public void send(String line) {

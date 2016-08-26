@@ -93,32 +93,36 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
         clientSockets.forEach(cs -> cs.send(line.serialize()));
     }
 
-    private void parseLine(ClientSocket clientSocket, String rawLine) {
+    private boolean parseLine(ClientSocket clientSocket, String rawLine) {
         Line abstractLine;
 
         try {
             abstractLine = LineFactory.parse(rawLine);
         } catch (AbstractProtocolException e) {
             logger.warn("Invalid line");
-            return;
+            return false;
         }
 
         if (abstractLine instanceof ClientConnectLine) {
-            doClientConnected((ClientConnectLine) abstractLine, clientSocket);
+            return doClientConnected((ClientConnectLine) abstractLine, clientSocket);
         } else if (abstractLine instanceof ClientUpdateLine) {
-            doClientUpdate((ClientUpdateLine) abstractLine);
+            return doClientUpdate((ClientUpdateLine) abstractLine);
         } else if (abstractLine instanceof ClientDisconnectLine) {
-            doClientDisconnected((ClientDisconnectLine) abstractLine);
+            return doClientDisconnected((ClientDisconnectLine) abstractLine);
         } else if (abstractLine instanceof HabPositionLine) {
-            doHabPosition((HabPositionLine) abstractLine);
+            return doHabPosition((HabPositionLine) abstractLine);
         } else if (abstractLine instanceof HabImageLine) {
-            doHabImage((HabImageLine) abstractLine);
+            return doHabImage((HabImageLine) abstractLine);
         } else if (abstractLine instanceof HabTelemetryLine) {
-            doHabTelemetry((HabTelemetryLine) abstractLine);
+            return doHabTelemetry((HabTelemetryLine) abstractLine);
+        } else if (abstractLine instanceof ServerPingLine) {
+            return doServerPing((ServerPingLine) abstractLine, clientSocket);
         }
+
+        return false;
     }
 
-    private void doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
+    private boolean doClientConnected(ClientConnectLine line, ClientSocket clientSocket) {
         logger.info("doClientConnected");
 
         removeClientIfExists(line.getId());
@@ -150,9 +154,11 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
         clientSocket.setClientId(line.getId());
 
         logger.info(String.format("New client connected: %s", client));
+
+        return true;
     }
 
-    private void doClientUpdate(ClientUpdateLine line) {
+    private boolean doClientUpdate(ClientUpdateLine line) {
         logger.info("doClientUpdate");
 
         Optional<Client> clientOptional = context.getClients().stream()
@@ -165,9 +171,11 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             context.getClients().add(client);
             logger.info(String.format("Client %s updated", client));
         }
+
+        return true;
     }
 
-    private void doClientDisconnected(ClientDisconnectLine line) {
+    private boolean doClientDisconnected(ClientDisconnectLine line) {
         logger.info("doClientDisconnected");
 
         Optional<Client> clientOptional = context.getClients().stream()
@@ -178,17 +186,21 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             context.getClients().remove(client);
             logger.info(String.format("Client %s disconnected", client));
         }
+
+        return true;
     }
 
-    private void doHabPosition(HabPositionLine line) {
+    private boolean doHabPosition(HabPositionLine line) {
         logger.info("doHabPosition");
 
         Position position = new Position(line);
         context.getHab().setPosition(position);
         logger.info("New HAB position");
+
+        return true;
     }
 
-    private void doHabImage(HabImageLine line) {
+    private boolean doHabImage(HabImageLine line) {
         logger.info("doHabImage");
 
         if (line.getSliceNum() == 1) {
@@ -204,10 +216,20 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
             handleNewImage(context.getHab().getImageData());
             logger.info("New image completed");
         }
+
+        return true;
     }
 
-    private void doHabTelemetry(HabTelemetryLine line) {
+    private boolean doHabTelemetry(HabTelemetryLine line) {
         logger.info("doHabTelemetry");
+
+        return true;
+    }
+
+    private boolean doServerPing(ServerPingLine line, ClientSocket clientSocket) {
+        logger.info("doServerPing");
+        clientSocket.send(line);
+        return false;
     }
 
     private void handleNewImage(byte[] imageData) {
