@@ -38,6 +38,6 @@ appender("FILE", RollingFileAppender) {
     }
 }
 
-root(WARN, ["STDOUT", "STDERR"])
+root(WARN, ["STDOUT", "STDERR", "FILE"])
 
 logger("org.thehellnet.shab.socketserver", DEBUG)
