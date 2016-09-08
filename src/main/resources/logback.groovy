@@ -5,9 +5,9 @@ import ch.qos.logback.core.joran.spi.ConsoleTarget
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 
-//def logDir = new File(System.getProperty("user.home"), "/work/socketserver").toString();
-//def logName = "socketserver.log";
-//def logTag = "%d{yyyyMMdd}";
+def logDir = new File(System.getProperty("user.home"), "/logs/shab").toString();
+def logName = "socketserver.log";
+def logTag = "%d{yyyyMMdd}";
 
 appender("STDOUT", ConsoleAppender) {
     target = ConsoleTarget.SystemOut
@@ -27,16 +27,16 @@ appender("STDERR", ConsoleAppender) {
     filter LevelThresholdFilter
 }
 
-//appender("FILE", RollingFileAppender) {
-//    append = true
-//    rollingPolicy(TimeBasedRollingPolicy) {
-//        fileNamePattern = new File(logDir, String.format("%s-%s", logTag, logName)).toString()
-//        maxHistory = 30
-//    }
-//    encoder(PatternLayoutEncoder) {
-//        pattern = "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n"
-//    }
-//}
+appender("FILE", RollingFileAppender) {
+    append = true
+    rollingPolicy(TimeBasedRollingPolicy) {
+        fileNamePattern = new File(logDir, String.format("%s-%s", logTag, logName)).toString()
+        maxHistory = 30
+    }
+    encoder(PatternLayoutEncoder) {
+        pattern = "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n"
+    }
+}
 
 root(WARN, ["STDOUT", "STDERR"])
 
