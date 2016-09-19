@@ -142,19 +142,6 @@ public class SocketServer implements ListenSocketCallback, ClientSocketCallback 
                     }
                 });
 
-        if (context.getHab().getPosition() != null) {
-            HabPositionLine habPositionLine = new HabPositionLine(context.getHab());
-            clientSocket.send(habPositionLine);
-        }
-
-        if (context.getHab().getImageData().length > 0) {
-            HabImageLine habImageLine = new HabImageLine(context.getHab());
-            clientSocket.send(habImageLine);
-        }
-
-        HabTelemetryLine habTelemetryLine = new HabTelemetryLine(context.getHab());
-        clientSocket.send(habTelemetryLine);
-
         Client client = new Client();
         client.setId(line.getId());
         client.setName(line.getName());

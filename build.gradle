@@ -1,5 +1,5 @@
 group "org.thehellnet.shab"
-version "0.9.3"
+version "0.9.4"
 
 apply plugin: "java"
 apply plugin: "idea"
@@ -9,6 +9,9 @@ targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven {
+        url "http://mvnrepo.thehellnet.org/artifactory/utility"
+    }
     maven {
         url "http://mvnrepo.thehellnet.org/artifactory/shab"
     }
@@ -50,6 +53,8 @@ dependencies {
     compile group: "joda-time", name: "joda-time", version: "2.9.4"
 
     compile group: "org.thehellnet.shab", name: "protocol", version: "2.2.0"
+
+    compile group: "ch.qos.logback", name: "logback-level-threshold", version: "1.0.0"
 
     testCompile group: "junit", name: "junit", version: "4.12"
 }
